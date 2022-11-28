@@ -54,6 +54,22 @@ describe("GET /hotels", () => {
       const response = await api.get("/hotels").set("Authorization", `Bearer ${token}`);
       expect(response.body).toEqual([]);
     }); */
+    it("should response with status 404 if the user has not registered yet", async () => {
+      const user = await createUser();
+      const token = await generateValidToken(user);
+      
+      const response = await api.get("/hotels").set("Authorization", `Bearer ${token}`);
+      expect(response.status).toBe(404);
+    });
+
+    it("should response with status 404 if the user has not ticket yet", async () => {
+      const user = await createUser(); 
+      const token = await generateValidToken(user);
+      await createEnrollmentWithAddress(user);
+      
+      const response = await api.get("/hotels").set("Authorization", `Bearer ${token}`);
+      expect(response.status).toBe(404);
+    });
 
     it("should respond with status 409 if the ticket has not been paid", async () => {
       const user = await createUser(); 
@@ -97,7 +113,7 @@ describe("GET /hotels", () => {
           includesHotel: false,
         },
       });
-      const ticket = await createTicket(enrollment.id, ticketType.id, TicketStatus.PAID);
+      await createTicket(enrollment.id, ticketType.id, TicketStatus.PAID);
 
       const response = await api.get("/hotels").set("Authorization", `Bearer ${token}`);
 
@@ -164,6 +180,23 @@ describe("GET /hotels/:hotelId", () => {
   });
 
   describe("when token is valid", () => {
+    it("should response with status 404 if the user has not registered yet", async () => {
+      const user = await createUser();
+      const token = await generateValidToken(user);
+      
+      const response = await api.get("/hotels/1").set("Authorization", `Bearer ${token}`);
+      expect(response.status).toBe(404);
+    });
+
+    it("should response with status 404 if the user has not ticket yet", async () => {
+      const user = await createUser();
+      const token = await generateValidToken(user);
+      await createEnrollmentWithAddress(user);
+      
+      const response = await api.get("/hotels/1").set("Authorization", `Bearer ${token}`);
+      expect(response.status).toBe(404);
+    });
+
     it("should respond with status 409 if the ticket has not been paid", async () => {
       const user = await createUser(); 
       const token = await generateValidToken(user);
@@ -239,23 +272,25 @@ describe("GET /hotels/:hotelId", () => {
       });
 
       const response = await api.get(`/hotels/${hotel.id}`).set("Authorization", `Bearer ${token}`);
-      expect(response.body).toEqual({
-        id: hotel.id,
-        name: hotel.name,
-        image: hotel.image,
-        createdAt: hotel.createdAt.toISOString(),
-        updatedAt: hotel.updatedAt.toISOString(),
-        Rooms: [
-          {
-            id: Room.id,
-            name: Room.name,
-            capacity: Room.capacity,
-            hotelId: Room.hotelId,
-            createdAt: Room.createdAt.toISOString(),
-            updatedAt: Room.updatedAt.toISOString(),
-          }
-        ]
-      });
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          id: expect.any(Number),
+          name: expect.any(String),
+          image: expect.any(String),
+          createdAt: expect.any(String),
+          updatedAt: expect.any(String),
+          Rooms: expect.arrayContaining([
+            expect.objectContaining({
+              id: expect.any(Number),
+              name: expect.any(String),
+              capacity: expect.any(Number),
+              hotelId: expect.any(Number),
+              createdAt: expect.any(String),
+              updatedAt: expect.any(String),
+            }),
+          ]),
+        }),
+      );
     });
   });
 });
